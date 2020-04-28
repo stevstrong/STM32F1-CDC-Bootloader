@@ -101,6 +101,7 @@ struct usb_setup_data {
 #define USB_REQ_GET_INTERFACE		10
 #define USB_REQ_SET_INTERFACE		11
 #define USB_REQ_SET_SYNCH_FRAME		12
+#define USB_REQ_LAST				13
 
 /* USB Descriptor Types - Table 9-5 */
 #define USB_DT_DEVICE						1

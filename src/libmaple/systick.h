@@ -76,6 +76,7 @@ typedef struct systick_reg_map {
 
 /** System elapsed time, in milliseconds */
 extern volatile uint32 systick_uptime_millis;
+extern void (*systick_user_callback)(void);
 
 /**
  * @brief Returns the system uptime, in milliseconds.
@@ -84,10 +85,46 @@ static inline uint32 systick_uptime(void) {
     return systick_uptime_millis;
 }
 
+/**
+ * Clock the system timer with the core clock, but don't turn it
+ * on or enable interrupt.
+ */
+static inline void systick_disable() {
+    SYSTICK_BASE->CSR = SYSTICK_CSR_CLKSOURCE_CORE;
+}
 
-void systick_init(uint32 reload_val);
-void systick_disable();
-void systick_enable();
+/**
+ * @brief Attach a callback to be called from the SysTick exception handler.
+ *
+ * To detach a callback, call this function again with a null argument.
+ */
+static inline void systick_attach_callback(void (*callback)(void)) {
+    systick_user_callback = callback;
+}
+
+/**
+ * Clock the system timer with the core clock and turn it on;
+ * interrupt every 1 ms, for systick_timer_millis.
+ */
+static inline void systick_enable() {
+    /* re-enables init registers without changing reload val */
+    SYSTICK_BASE->CSR = (SYSTICK_CSR_CLKSOURCE_CORE   |
+                         SYSTICK_CSR_ENABLE           |
+                         SYSTICK_CSR_TICKINT_PEND);
+}
+
+/**
+ * @brief Initialize and enable SysTick.
+ *
+ * Clocks the system timer with the core clock, turns it on, and
+ * enables interrupts.
+ *
+ * @param reload_val Appropriate reload counter to tick every 1 ms.
+ */
+static inline void systick_init() {
+    SYSTICK_BASE->RVR = SYSTICK_RELOAD_VAL;
+    systick_enable();
+}
 
 /**
  * @brief Returns the current value of the SysTick counter.
@@ -109,13 +146,7 @@ static inline uint32 systick_check_underflow(void) {
     return SYSTICK_BASE->CSR & SYSTICK_CSR_COUNTFLAG;
 }
 
-/**
- * @brief prototype for systick_attach_callback
- *
- */
-extern void systick_attach_callback(void (*callback)(void));
 extern void __exc_systick(void);
-
 
 
 /**
@@ -150,31 +181,6 @@ static inline uint32 micros(void) {
             (SYSTICK_RELOAD_VAL + 1 - cycle_cnt) / CYCLES_PER_MICROSECOND);
 #undef US_PER_MS
 }
-
-/**
- * Delay for at least the given number of milliseconds.
- *
- * Interrupts, etc. may cause the actual number of milliseconds to
- * exceed ms.  However, this function will return no less than ms
- * milliseconds from the time it is called.
- *
- * @param ms the number of milliseconds to delay.
- * @see delayMicroseconds()
- */
-void delay(uint32 ms);
-
-/**
- * Delay for at least the given number of microseconds.
- *
- * Interrupts, etc. may cause the actual number of microseconds to
- * exceed us.  However, this function will return no less than us
- * microseconds from the time it is called.
- *
- * @param us the number of microseconds to delay.
- * @see delay()
- */
-void delayMicroseconds(uint32 us);
-
 
 
 

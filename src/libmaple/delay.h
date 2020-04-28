@@ -62,6 +62,33 @@ static inline void delay_us(uint32 us) {
                  : "r0");
 }
 
+/**
+ * Delay for at least the given number of microseconds.
+ *
+ * Interrupts, etc. may cause the actual number of microseconds to
+ * exceed us.  However, this function will return no less than us
+ * microseconds from the time it is called.
+ *
+ * @param us the number of microseconds to delay.
+ * @see delay()
+ */
+static inline void delayMicroseconds(uint32 us) {
+    delay_us(us);
+}
+
+/**
+ * Delay for at least the given number of milliseconds.
+ *
+ * Interrupts, etc. may cause the actual number of milliseconds to
+ * exceed ms.  However, this function will return no less than ms
+ * milliseconds from the time it is called.
+ *
+ * @param ms the number of milliseconds to delay.
+ * @see delayMicroseconds()
+ */
+void delay(uint32 ms);
+
+
 #ifdef __cplusplus
 }
 #endif

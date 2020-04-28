@@ -207,16 +207,16 @@
 
 // EP buffer address offsets
 // EP0 = control
-#define EP_CTRL_TX_OFFSET   0      /* 64 Bytes ab   0 */
-#define EP_CTRL_RX_OFFSET   (EP_CTRL_TX_OFFSET + EP_DATA_LEN)     // 64 Bytes
+#define EP_CTRL_TX_OFFSET   0									// start: 0, length: 64
+#define EP_CTRL_RX_OFFSET  (EP_CTRL_TX_OFFSET + EP_DATA_LEN)	// start: +64, length: 64
 
-// EP1 = Bulk-IN+OUT for COMM
-#define EP_COMM_TX_OFFSET  (EP_CTRL_RX_OFFSET + EP_DATA_LEN) //128    // +64 Bytes
-#define EP_COMM_RX_OFFSET  (EP_COMM_TX_OFFSET + EP_INT_MAX_LEN) //136    // +8 Bytes
+// EP1 = Bulk-IN+OUT for DATA
+#define EP_DATA_TX_OFFSET  (EP_CTRL_RX_OFFSET + EP_DATA_LEN)	// start: +64, length: 64
+#define EP_DATA_RX_OFFSET  (EP_DATA_TX_OFFSET + EP_DATA_LEN)	// start: +64, length: 64
 
-// EP2 = Bulk-IN+OUT for DATA
-#define EP_DATA_TX_OFFSET  (EP_COMM_RX_OFFSET + EP_INT_MAX_LEN) //144    // +8 Bytes
-#define EP_DATA_RX_OFFSET  (EP_DATA_TX_OFFSET + EP_DATA_LEN) //208    // +64 Bytes
+// EP2 = Bulk-IN+OUT for COMM
+#define EP_COMM_TX_OFFSET  (EP_DATA_RX_OFFSET + EP_DATA_LEN)	// start: +64, length: 8
+#define EP_COMM_RX_OFFSET  (EP_COMM_TX_OFFSET + EP_INT_MAX_LEN)	// start: +8, length: 8
 
 
 // Allocation of the EP buffers
@@ -225,11 +225,11 @@
 #define EP_CTRL_TX_BUF_ADDRESS	(USB_RAM + (EP_CTRL_TX_OFFSET<<UMEM_SHIFT))
 #define EP_CTRL_RX_BUF_ADDRESS	(USB_RAM + (EP_CTRL_RX_OFFSET<<UMEM_SHIFT))
 
-#define EP_COMM_TX_BUF_ADDRESS	(USB_RAM + (EP_COMM_TX_OFFSET<<UMEM_SHIFT))
-#define EP_COMM_RX_BUF_ADDRESS	(USB_RAM + (EP_COMM_RX_OFFSET<<UMEM_SHIFT))
-
 #define EP_DATA_TX_BUF_ADDRESS	(USB_RAM + (EP_DATA_TX_OFFSET<<UMEM_SHIFT))
 #define EP_DATA_RX_BUF_ADDRESS	(USB_RAM + (EP_DATA_RX_OFFSET<<UMEM_SHIFT))
+
+#define EP_COMM_TX_BUF_ADDRESS	(USB_RAM + (EP_COMM_TX_OFFSET<<UMEM_SHIFT))
+#define EP_COMM_RX_BUF_ADDRESS	(USB_RAM + (EP_COMM_RX_OFFSET<<UMEM_SHIFT))
 
 
 // EP table
@@ -245,7 +245,7 @@ typedef struct epTableAddress_t {
     uint32_t * txAddr;
     uint32_t * rxAddr;
 } epTableAddress_t;
-extern const epTableAddress_t epTableAddr[3]; // number of EPs
+extern const epTableAddress_t epTableAddr[2]; // number of EPs
 
 #define EP_TABLE_OFFSET		400    // storing 64 bytes after 400
 

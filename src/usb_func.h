@@ -29,7 +29,7 @@ typedef struct
 
     bool remoteWakeup;
     bool selfPowered;
-    uint8_t configuration;
+    int configuration;
 } command_t;
 
 /* Line coding structure
@@ -96,7 +96,7 @@ static inline bool IsVendorRequest(void)
 #define FLASH_BASE			(0x08000000)
 #define SRAM_BASE			(0x20000000)
 // Bootloader size
-#define BOOTLOADER_SIZE		(8 * 1024)
+#define BOOTLOADER_SIZE		(4 * 1024)
 
 // SRAM size
 #define SRAM_SIZE			(20 * 1024)

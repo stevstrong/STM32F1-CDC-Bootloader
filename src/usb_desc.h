@@ -18,7 +18,7 @@
 #endif
 
 // assignment of the USB EP numbers - bEndpointAddress
-enum { EP_CTRL, EP_COMM, EP_DATA, NUM_EP };
+enum { EP_CTRL, EP_DATA, EP_COMM, EP_MAX };
 
 #define NUM_IFACES	2 // COMM + DATA
 

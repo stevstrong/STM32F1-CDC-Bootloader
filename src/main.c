@@ -180,9 +180,7 @@ void Main_init(void)
 
     UsbSetup();
 
-	systick_init(SYSTICK_RELOAD_VAL);
-
-	interrupts();
+	systick_init();
 }
 //-----------------------------------------------------------------------------
 void Main_loop()
@@ -230,17 +228,6 @@ int main(void)
 		gpio_read_pin(PB2) ||
 		(Check_user_code(USER_PROGRAM) == false))
 	{
-		if (magic_word == 0x424C)
-		{
-			// If a magic word was stored in the battery-backed RAM registers
-			// then exit from USB Serial mode and go to bootloader mode...
-			LED_ON;
-			// Reset the USB
-			//USB_power_off();
-
-//			delay(10); // wait till eventually triggered interrupts are served
-		}
-
 		Main_init();
 
 		// wait till flash writing process is complete

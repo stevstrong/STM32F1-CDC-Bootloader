@@ -31,10 +31,10 @@ status_t usb_state;
 
 uint16_t Dtr_Rts;
 uint8_t deviceAddress;
-const epTableAddress_t epTableAddr[NUM_EP] = { //; // number of EPs
+const epTableAddress_t epTableAddr[2] = { //; // number of EPs
 	{ .txAddr = (uint32*)EP_CTRL_TX_BUF_ADDRESS, .rxAddr = (uint32*)EP_CTRL_RX_BUF_ADDRESS },
-	{ .txAddr = (uint32*)EP_COMM_TX_BUF_ADDRESS, .rxAddr = (uint32*)EP_COMM_RX_BUF_ADDRESS },
 	{ .txAddr = (uint32*)EP_DATA_TX_BUF_ADDRESS, .rxAddr = (uint32*)EP_DATA_RX_BUF_ADDRESS },
+//	{ .txAddr = (uint32*)EP_COMM_TX_BUF_ADDRESS, .rxAddr = (uint32*)EP_COMM_RX_BUF_ADDRESS },
 };
 
 // constant to send zero byte packets
@@ -168,17 +168,17 @@ void InitEndpoints(void)
 	EpTable[EP_CTRL].rxOffset = EP_CTRL_RX_OFFSET;
 	EpTable[EP_CTRL].rxCount = EP_RX_LEN_ID;
 
-	// EP1 = Int IN and OUT
-	EpTable[EP_COMM].txOffset = EP_COMM_TX_OFFSET;
-	EpTable[EP_COMM].txCount = 0;
-	EpTable[EP_COMM].rxOffset = EP_COMM_RX_OFFSET;
-	EpTable[EP_COMM].rxCount = EP_RX_LEN_ID;
-
-	// EP2 = Bulk IN and OUT
+	// EP1 = Bulk IN and OUT
 	EpTable[EP_DATA].txOffset = EP_DATA_TX_OFFSET;
 	EpTable[EP_DATA].txCount = 0;
 	EpTable[EP_DATA].rxOffset = EP_DATA_RX_OFFSET;
 	EpTable[EP_DATA].rxCount = EP_RX_LEN_ID;
+
+	// EP2 = Int IN and OUT
+	EpTable[EP_COMM].txOffset = EP_COMM_TX_OFFSET;
+	EpTable[EP_COMM].txCount = 0;
+	EpTable[EP_COMM].rxOffset = EP_COMM_RX_OFFSET;
+	EpTable[EP_COMM].rxCount = EP_RX_LEN_ID;
 
 	USB_BTABLE = EP_TABLE_OFFSET;
 
@@ -188,25 +188,24 @@ void InitEndpoints(void)
 		(2 << 4) |		// STAT_TX = 2, NAK
 		(1 << 9) |		// EP_TYPE = 1, Control
 		EP_CTRL;
-	// COMM EP
-	USB_EP1R =			// EP1 = Int, IN und OUT
-		(3 << 12) |		// STAT_RX = 3, Rx enabled
-		(2 << 4) |		// STAT_TX = 2, NAK
-		(3 << 9) |		// EP_TYPE = 3, INT
-		EP_COMM;
 	// DATA EP
-	USB_EP2R =			// EP2 = Bulk IN and OUT
+	USB_EP1R =			// EP1 = Bulk IN and OUT
 		(3 << 12) |		// STAT_RX = 3, Rx enabled
 		(2 << 4) |		// STAT_TX = 2, NAK
 		(0 << 9) |		// EP_TYPE = 0, Bulk
 		EP_DATA;
+	// COMM EP
+	USB_EP2R =			// EP2 = Int, IN und OUT
+		(3 << 12) |		// STAT_RX = 3, Rx enabled
+		(2 << 4) |		// STAT_TX = 2, NAK
+		(3 << 9) |		// EP_TYPE = 3, INT
+		EP_COMM;
 
 	USB_ISTR = 0;          // clear pending Interrupts
 	USB_CNTR =
 		CTRM |             // Irq by ACKed Pakets
 		RESETM |           // Irq by Reset
-		SUSPM | WKUPM | ESOFM |
-		SOFM;              // Irq by 1 ms Frame
+		SUSPM | WKUPM;
 
 	USB_SetAddress(0);
 }
@@ -312,7 +311,6 @@ void DoSetClearFeature(bool value)
 {
     int feature = CMD.setupPacket.wValue;
     int reqType = CMD.setupPacket.bmRequestType;
-    int ep = CMD.setupPacket.wIndex;
 
     strace("scFeature for %02x\n",reqType);
 
@@ -332,6 +330,7 @@ void DoSetClearFeature(bool value)
         trace("EP\n");
         if (feature == 0)
         {
+		int ep = CMD.setupPacket.wIndex;
             if (value == false)
                 Stall(ep);
             else
@@ -350,11 +349,6 @@ void DoSetClearFeature(bool value)
 //-----------------------------------------------------------------------------
 // CDC specific functions
 //-----------------------------------------------------------------------------
-static inline bool Class_Compare(uint16_t aValue) // always true, not used
-{
-	(void) aValue;
-    return true;
-}
 
 //-----------------------------------------------------------------------------
 // store DTR and RTS values
@@ -379,7 +373,7 @@ static void CDC_GetLineCoding(void)
 {
 	trace("CDC_GetLC-");
 	CMD.packetLen = EP_DATA_LEN;
-	CMD.transferLen = 7;
+	CMD.transferLen = sizeof(lineCoding_t);
 	CMD.transferPtr = (uint8_t*) &lineCoding;
 	TransmitSetupPacket();
 }
@@ -541,27 +535,17 @@ void Req_SetConfiguration()
 {
 	trace("SET_CFG-");
 
-	bool config = Class_Compare(CMD.setupPacket.wValue);
 	if (CMD.setupPacket.wValue == 0)
 	{
 		trace("000-");
 		CMD.configuration = CMD.setupPacket.wValue & 0xFF;
 		usb_state.configured = false;
 	}
-	else if (config)
+	else
 	{
-//		USB_ConfigDevice(true);
 		Class_Start();
 		CMD.configuration = CMD.setupPacket.wValue & 0xFF;
 		usb_state.configured = true;
-	}
-	else
-	{	// should not hapen
-		trace("ERR-");
-		CMD.configuration = 0;
-		usb_state.configured = false;
-		Stall(EP_CTRL_ADDR_OUT); // send NAK
-		return;
 	}
 	ACK();
 }
@@ -580,14 +564,6 @@ void Req_SetInterface()
 	trace("SET_IFACE-");
 
 	Class_Start();
-	ACK();
-}
-//-----------------------------------------------------------------------------
-int sofCounter;
-//-----------------------------------------------------------------------------
-void Req_SOF()
-{
-	sofCounter++;
 	ACK();
 }
 //-----------------------------------------------------------------------------
@@ -620,7 +596,7 @@ voidFuncPtr const reqFunc[] = {
 		Req_SetConfiguration,	// USB_REQ_SET_CONFIGURATION = 9
 		Req_GetInterface,		// USB_REQ_GET_INTERFACE = 10
 		Req_SetInterface,		// USB_REQ_SET_INTERFACE = 11
-		Req_SOF,				// USB_REQ_SET_SYNCH_FRAME = 12
+		NULL,				// USB_REQ_SET_SYNCH_FRAME = 12
 };
 //-----------------------------------------------------------------------------
 void OnSetup(void)
@@ -633,7 +609,7 @@ void OnSetup(void)
 		trace("STD-");
 
 		int bReq = CMD.setupPacket.bRequest;
-		if (bReq<=USB_REQ_SET_SYNCH_FRAME)
+		if (bReq<USB_REQ_LAST)
 		{
 			voidFuncPtr func = reqFunc[bReq];
 			if (func) {
@@ -832,12 +808,13 @@ void OnEpBulkOut(void)
 	else if (page_len>0)
 	{	// data stage. store data packet into buffer
 		ReadData(EP_DATA, rx_buf, rxd);
-		// update index
+		// flash the data from buffer
 		flash_write_data( (uint16_t*) ( USER_PROGRAM + (crt_page * PAGE_SIZE) + page_offset), (uint16_t*)rx_buf, (rxd+1)>>1);
+		// update page index
 		page_offset += rxd;
 		// check if buffer full
 		if (page_offset>=page_len)
-		{	// it is the last data packet. prepare header stage
+		{	// it was the last data packet from the current page. prepare header stage
 			++crt_page;
 			header_ok = 0;
 			page_len = 0;
@@ -862,19 +839,14 @@ void NAME_OF_USB_IRQ_HANDLER(void)
 		trace("WKUP\n");
 		USB_CNTR &= ~(FSUSP | LP_MODE);
 		usb_state.suspended = false;
-	} else
-	if (irqStatus & SUSP) // after 3 ms break -->Suspend
+	}
+	else if (irqStatus & SUSP) // after 3 ms break -->Suspend
 	{
 		trace("SUSP\n");
 		usb_state.suspended = true;
 		USB_CNTR |= (FSUSP | LP_MODE);
 	}
 
-	if (irqStatus & SOF) // Start of Frame, every 1 ms
-	{
-		//trace("SOF\n");
-		usb_state.suspended = false;
-	}
 	// clear here the other interrupt bits
 	USB_ISTR = ~(PMAOVR|ERR|WKUP|SUSP|RESET|SOF|ESOF); // clear diverse IRQ bits
 
