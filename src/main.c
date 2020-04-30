@@ -186,10 +186,10 @@ void Main_init(void)
 void Main_loop()
 {
 	LED_ON;
-	delay(100); // will call yield()
+	delay(50); // will call yield()
 
 	LED_OFF;
-	delay(100); // will call yield()
+	delay(50); // will call yield()
 
 #ifdef USB_DEBUG
 

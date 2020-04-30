@@ -24,7 +24,6 @@
 #include "usb_desc.h"
 #include "usbstd.h"
 #include "cdc.h"
-#include "hid.h"
 
 #define SERIAL_USB_ONLY // use CDC only. Uncomment for a combined device
 
